@@ -1,0 +1,9 @@
+{
+	"@metadata": {
+		"authors": [
+			"Peter Li",
+			"Luka Simić"
+		]
+	},
+	"boilerplate-desc": "Lets Scribunto modules recover the raw, unexpanded arguments of #invoke and its parent template."
+}

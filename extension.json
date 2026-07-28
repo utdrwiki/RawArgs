@@ -1,0 +1,36 @@
+{
+	"name": "RawArgs",
+	"version": "0.2.0",
+	"author": [
+		"Peter Li",
+		"[https://kocka.tech Luka Simić]"
+	],
+	"url": "https://www.mediawiki.org/wiki/Special:MyLanguage/Extension:RawArgs",
+	"descriptionmsg": "rawargs-desc",
+	"license-name": "GPL-2.0-or-later",
+	"type": "parserhook",
+	"requires": {
+		"MediaWiki": ">= 1.45.0",
+		"extensions": {
+			"Scribunto": "*"
+		}
+	},
+	"Hooks": {
+		"ParserFirstCallInit": "main",
+		"ScribuntoExternalLibraries": "main"
+	},
+	"HookHandlers": {
+		"main": {
+			"class": "MediaWiki\\Extension\\RawArgs\\Hooks"
+		}
+	},
+	"MessagesDirs": {
+		"RawArgs": [
+			"i18n"
+		]
+	},
+	"AutoloadNamespaces": {
+		"MediaWiki\\Extension\\RawArgs\\": "src/"
+	},
+	"manifest_version": 2
+}

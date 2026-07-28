@@ -1,0 +1,112 @@
+name: Lint and test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ "*" ]
+
+jobs:
+  test:
+    name: "PHPUnit: MW ${{ matrix.mw }}, PHP ${{ matrix.php }}"
+
+    strategy:
+      matrix:
+        include:
+          - mw: 'REL1_45'
+            php: 8.2
+            download-phpunit: true
+          - mw: 'REL1_45'
+            php: 8.4
+            download-phpunit: true
+          - mw: 'master'
+            php: 8.4
+            download-phpunit: false
+
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: mediawiki
+
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intlTemplateStyles
+          tools: composer
+
+      - name: Cache MediaWiki
+        id: cache-mediawiki
+        uses: actions/cache@v4
+        with:
+          path: |
+            mediawiki
+            !mediawiki/extensions/RawArgs
+            !mediawiki/vendor/
+          key: mw_${{ matrix.mw }}-php${{ matrix.php }}-v20
+
+      - name: Cache Composer cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-php${{ matrix.php }}
+
+      - name: Check out MediaWiki
+        if: steps.cache-mediawiki.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: wikimedia/mediawiki
+          ref: ${{ matrix.mw }}
+          path: mediawiki
+          submodules: recursive
+
+      - name: Check out Scribunto if it wasn't already
+        if: ${{ hashFiles('mediawiki/extensions/Scribunto/') == '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: wikimedia/mediawiki-extensions-Scribunto
+          ref: ${{ matrix.mw }}
+          path: mediawiki/extensions/Scribunto
+
+      - name: Composer update (MediaWiki)
+        run: composer update
+
+      - name: Install the wiki
+        if: steps.cache-mediawiki.outputs.cache-hit != 'true'
+        run: maintenance/run install --dbtype sqlite --dbuser root --dbname mw --dbpath $(pwd) --pass AdminPassword WikiName AdminUser
+
+      - name: Configure the wiki
+        if: steps.cache-mediawiki.outputs.cache-hit != 'true'
+        run: |
+          echo '
+          $wgShowExceptionDetails = true;
+          $wgDevelopmentWarnings = true;
+          $wgShowDBErrorBacktrace = true;
+          wfLoadExtension( "Scribunto" );
+          wfLoadExtension( "RawArgs" );
+          ' >> LocalSettings.php
+
+      - name: Check out RawArgs
+        uses: actions/checkout@v4
+        with:
+          path: mediawiki/extensions/RawArgs
+
+      - name: Composer update (extension)
+        working-directory: mediawiki/extensions/RawArgs
+        run: composer update
+
+      - name: Run update.php
+        run: maintenance/run update --quick
+
+      - name: Run phpcs
+        working-directory: mediawiki/extensions/RawArgs
+        run: composer test
+
+      - name: Run phan
+        working-directory: mediawiki/extensions/RawArgs
+        run: composer phan
+
+      - name: Run PHPUnit
+        run: composer phpunit -- --group RawArgs
