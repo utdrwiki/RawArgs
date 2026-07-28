@@ -1,5 +1,5 @@
 {
-	"name": "BoilerPlate",
+	"name": "RawArgs",
 	"private": true,
 	"scripts": {
 		"test": "grunt test"
